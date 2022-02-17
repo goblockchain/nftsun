@@ -1,0 +1,52 @@
+name: Deploy to S3
+on:
+  workflow_dispatch:
+
+env:
+  HTML: ${{ secrets.HTML }}
+  NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS: ${{secrets.NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS}}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16
+        if: ${{ env.HTML == 0}}
+        id: setup
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.8.0
+
+      - name: Staging Build
+        if: ${{ env.HTML == 0}}
+        id: yarn-build
+        run: |
+          cd web_appp
+          yarn install && yarn build
+        env:
+          NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS: ${{secrets.NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS}}
+          
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        id: configure-credentials
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+        
+      - name: Sync Static Files to S3
+        if: ${{ env.HTML == 0}}
+        run: aws s3 sync web_appp/out s3://${{ secrets.BUCKET_NAME }}
+
+      - name: Sync HTML files to S3
+        if: ${{ env.HTML == 1}}
+        run: |
+          rm -rf .git/ &&
+          rm -rf .github/ &&
+          aws s3 sync . s3://${{ secrets.BUCKET_NAME }}
