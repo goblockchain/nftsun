@@ -1,10 +1,14 @@
 name: Deploy to S3
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [Deploy_S3]
 
 env:
+  NOME_DO_CLIENTE: ${{ secrets.NOME_DO_CLIENTE }}
   HTML: ${{ secrets.HTML }}
   NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS: ${{secrets.NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS}}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +34,7 @@ jobs:
           cd web_appp
           yarn install && yarn build
         env:
-          NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS: ${{secrets.NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS}}
+           NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS: ${{secrets.NEXT_PUBLIC_STORE_NFT_CONTRACT_ADDRESS}}
           
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -42,12 +46,11 @@ jobs:
         
       - name: Sync Static Files to S3
         if: ${{ env.HTML == 0}}
-        run: aws s3 sync web_appp/out s3://${{ secrets.BUCKET_NAME }}
+        run: aws s3 sync web_appp/out s3://${NOME_DO_CLIENTE}.goblockchain.io
 
       - name: Sync HTML files to S3
         if: ${{ env.HTML == 1}}
         run: |
           rm -rf .git/ &&
           rm -rf .github/ &&
-          cd nft-claris/
-          aws s3 sync . s3://${{ secrets.BUCKET_NAME }}
+          aws s3 sync . s3://${NOME_DO_CLIENTE}.goblockchain.io
